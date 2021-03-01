@@ -134,19 +134,23 @@ class AnnoncesController extends AbstractController
 
         return $this->redirectToRoute('annonces_index');
     }
+
+
     /**
-     * @Route("/delete/image/{id}", name="annonces_delete_image", methods={"DELETE"}, )
+     * @Route("/supprime/image/{id}", name="annonces_delete_image", methods={"DELETE"})
      */
-
-
     public function deleteImage(Images $image, Request $request)
     {
         $data = json_decode($request->getContent(), true);
-        // on vérifie si le token est valide
-        if ($this->isCsrfTokenValid('delete' . $image->getId(), $data['_token'])) {
-            $nom = $image->getName();
-            unlink($this->getParameter('image_directory') . '/' . $nom);
 
+        // On vérifie si le token est valide
+        if ($this->isCsrfTokenValid('delete' . $image->getId(), $data['_token'])) {
+            // On récupère le nom de l'image
+            $nom = $image->getName();
+            // On supprime le fichier
+            unlink($this->getParameter('images_directory') . '/' . $nom);
+
+            // On supprime l'entrée de la base
             $em = $this->getDoctrine()->getManager();
             $em->remove($image);
             $em->flush();
