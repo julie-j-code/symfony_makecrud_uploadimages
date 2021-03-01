@@ -7,6 +7,7 @@ use App\Entity\Images;
 use App\Form\AnnoncesType;
 use App\Repository\AnnoncesRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -39,10 +40,10 @@ class AnnoncesController extends AbstractController
             // on récupère les images transmises
             $images = $form->get('images')->getData();
             // on boucle sur les images
-            foreach($images as $image){
+            foreach ($images as $image) {
                 // on génère un nouveau nom de fichier
                 // guessExtension méthode qui récupère l'extension
-                $fichier=md5(uniqid()).'.'.$image->guessExtension();
+                $fichier = md5(uniqid()) . '.' . $image->guessExtension();
                 // on copie le fichier dans le dossier uploads
                 $image->move(
                     $this->getParameter('images_directory'),
@@ -51,10 +52,9 @@ class AnnoncesController extends AbstractController
 
                 // on crée une nouvelle instance d'images
                 // on stocke l'image dans la base de données (son nom)
-                $img=new Images();
+                $img = new Images();
                 $img->setName($fichier);
                 $annonce->addImage($img);
-
             }
             $entityManager = $this->getDoctrine()->getManager();
             $entityManager->persist($annonce);
@@ -89,25 +89,25 @@ class AnnoncesController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
 
-                    // on récupère les images transmises
-                    $images = $form->get('images')->getData();
-                    // on boucle sur les images
-                    foreach($images as $image){
-                        // on génère un nouveau nom de fichier
-                        // guessExtension méthode qui récupère l'extension
-                        $fichier=md5(uniqid()).'.'.$image->guessExtension();
-                        // on copie le fichier dans le dossier uploads
-                        $image->move(
-                            $this->getParameter('images_directory'),
-                            $fichier
-                        );
-        
-                        // on crée une nouvelle instance d'images
-                        // on stocke l'image dans la base de données (son nom)
-                        $img=new Images();
-                        $img->setName($fichier);
-                        $annonce->addImage($img);
-                    }
+            // on récupère les images transmises
+            $images = $form->get('images')->getData();
+            // on boucle sur les images
+            foreach ($images as $image) {
+                // on génère un nouveau nom de fichier
+                // guessExtension méthode qui récupère l'extension
+                $fichier = md5(uniqid()) . '.' . $image->guessExtension();
+                // on copie le fichier dans le dossier uploads
+                $image->move(
+                    $this->getParameter('images_directory'),
+                    $fichier
+                );
+
+                // on crée une nouvelle instance d'images
+                // on stocke l'image dans la base de données (son nom)
+                $img = new Images();
+                $img->setName($fichier);
+                $annonce->addImage($img);
+            }
 
 
             $this->getDoctrine()->getManager()->flush();
@@ -126,12 +126,35 @@ class AnnoncesController extends AbstractController
      */
     public function delete(Request $request, Annonces $annonce): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$annonce->getId(), $request->request->get('_token'))) {
+        if ($this->isCsrfTokenValid('delete' . $annonce->getId(), $request->request->get('_token'))) {
             $entityManager = $this->getDoctrine()->getManager();
             $entityManager->remove($annonce);
             $entityManager->flush();
         }
 
         return $this->redirectToRoute('annonces_index');
+    }
+    /**
+     * @Route("/delete/image/{id}", name="annonces_delete_image", methods={"DELETE"}, )
+     */
+
+
+    public function deleteImage(Images $image, Request $request)
+    {
+        $data = json_decode($request->getContent(), true);
+        // on vérifie si le token est valide
+        if ($this->isCsrfTokenValid('delete' . $image->getId(), $data['_token'])) {
+            $nom = $image->getName();
+            unlink($this->getParameter('image_directory') . '/' . $nom);
+
+            $em = $this->getDoctrine()->getManager();
+            $em->remove($image);
+            $em->flush();
+
+            // On répond en json
+            return new JsonResponse(['success' => 1]);
+        } else {
+            return new JsonResponse(['error' => 'Token Invalide'], 400);
+        }
     }
 }
